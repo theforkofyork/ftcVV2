@@ -111,8 +111,6 @@ public class LBHW implements PID_Constants
         ml2.setPower(0);
         mr1.setPower(0);
         mr2.setPower(0);
-        bleft.setPosition(0.5);
-        bright.setPosition(0.5);
 
 
         // Set all motors to run without encoders.

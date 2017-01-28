@@ -245,12 +245,11 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
                 case Red_Beacon: {
                     {
+                        robot.bleft.setPosition(1);
                         robot.bright.setPosition(1);
-                        sleep(1000);
+                        powerDrive(-0.3);
+                        sleep(400);
                         robot.bright.setPosition(0);
-                        sleep(700);
-                        robot.bright.setPosition(0.5);
-                        robot.bleft.setPosition(0.5);
                         powerDrive(-0.2);
                         sleep(900);
                         powerDrive(0);
@@ -262,11 +261,10 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 case Blue_Beacon: {
                     {
                         robot.bleft.setPosition(0);
-                        sleep(1000);
+                        robot.bright.setPosition(0);
+                        powerDrive(-0.3);
+                        sleep(400);
                         robot.bleft.setPosition(1);
-                        sleep(700);
-                        robot.bleft.setPosition(0.5);
-                        robot.bright.setPosition(0.5);
                         powerDrive(-0.2);
                         sleep(900);
                         powerDrive(0);
