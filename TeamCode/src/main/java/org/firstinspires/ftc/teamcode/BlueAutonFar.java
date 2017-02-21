@@ -35,35 +35,24 @@ package org.firstinspires.ftc.teamcode;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.PID_Constants;
-import org.firstinspires.ftc.teamcode.AdafruitIMU;
-import org.firstinspires.ftc.teamcode.Power;
-import org.firstinspires.ftc.teamcode.Direction;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.Clock;
-import org.firstinspires.ftc.teamcode.DashBoard;
 
-/**
- Works for both red and blue sides
- Only if close to corner vortex, if at the other spot then use AutonFar
- */
 
-@Autonomous(name="Blue Auton Far (2B,2P)", group="Blue")
+@Autonomous(name="Blue Auton Far (1B,2P)", group="Blue")
 public class BlueAutonFar extends LinearOpMode implements PID_Constants {
 
     enum State {
         Drive_Forward,
         Shoot,
         Turn_To_Line,
+        Turn_To_LineRed,
         Drive,
         Drive_To_Line,
+        Drive_To_LineRed,
         Reverse_To_Line,
         Align,
         WallALign,
@@ -81,6 +70,9 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
         Reverse_To_Line2,
         Drive_To_Line2,
         Park,
+        Balance,
+        Balance2,
+        ResetEncoder,
         Stop,
     }
 
@@ -88,7 +80,6 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
 
     /* Declare OpMode members. */
     LBHW robot = new LBHW ();
-    AdafruitIMU imu = new AdafruitIMU("IMU");
     private ElapsedTime runtime = new ElapsedTime();
 
     static final double COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
@@ -97,62 +88,51 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
     static final double COUNTS_PER_INCH = (COUNTS_PER_MOTOR_REV * DRIVE_GEAR_REDUCTION) /
             (WHEEL_DIAMETER_INCHES * 3.1415);
     static final double DRIVE_SPEED = 1;
-    static final double SLOW_SPEED = 0.35;
+    static final double SLOW_SPEED = 0.4;
     static final double STOP = 0;
     static double odsReadngRaw;
     static double odsReadingLinear;
     static double odsReadngRaw2;
     static double odsReadingLinear2;
 
+
+
     double TARGET_VOLTAGE = 12.5;
     double voltage = 0;
     double kP = 0.18;
 
-    private double fTarget = 7.5e-7;
-    private double fVelocity = 0.0;
 
 
-    private int fEncoder = 0;
-    private int fLastEncoder = 0;
-
-    private long fVelocityTime = 0;
-    private long fLastVelocityTime = 0;
-
-    private double tolerance = 0.5e-7;
-    private static final int DEFAULT_SLEEP_TIME = 1000;
-    private static final double DEFAULT_TIMEOUT = 3;
 
 
 
     @Override
     public void runOpMode() throws InterruptedException {
-        //MasqAdafruitIMU imu = new MasqAdafruitIMU("IMU", hardwareMap);
-        /*
-         * Initialize the drive system variables.
-         * The init() method of the hardware class does all the work here
-         */
+
         robot.init(hardwareMap);
         state = State.Drive_Forward;
+        resetEncoder();
+        robot.bright.setPosition(0.75);
+        robot.bleft.setPosition(0.1);
+        robot.gate.setPosition(1);
 
 
-        int target = 0;  //Desired angle to turn to
-        robot.ml1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.ml2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.mr2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        robot.mr1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        idle();
 
-        robot.ml1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.ml2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.mr2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.mr1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        telemetry.addData(">", "Gyro Calibrating. Do Not move!");
+        telemetry.update();
+        robot.gyro.calibrate();
+        robot.gyro2.calibrate();
 
-
-      //  DashBoard dash = new DashBoard(telemetry);
-        while (!isStarted()) {
-            telemetry.addData("Status", "Initialization Complete");
-            telemetry.update();
+        // make sure the gyro is calibrated.
+        while (!isStopRequested() && robot.gyro.isCalibrating() && robot.gyro2.isCalibrating()) {
+            sleep(50);
+            idle();
         }
+        telemetry.addData(">", "Robot Ready.");    //
+        telemetry.update();
+
+        robot.gyro.resetZAxisIntegrator();
+        robot.gyro2.resetZAxisIntegrator();
 
         // make sure the gyro is calibrated.
 
@@ -171,12 +151,20 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
 
             switch (state) {
                 case Drive_Forward: {  //Drive forward for 0.7 seconds then stop and switch states to the turning coder
+                    resetEncoder();
+                    sleep(100);
                     voltageshoot();
                     robot.gate.setPosition(1);
-                    encoderDrive(SLOW_SPEED, 5.8, 5.8, 3);
+                    driveStraight(1,0.35);
+                    powerDrive(0);
                     state = State.Shoot;
                 }
                 break;
+                case Turn_To_LineRed: {
+                    state = State.Drive_To_LineRed;
+                }
+                break;
+                
                 case Shoot: {
                     shoot();
                     robot.fly.setPower(0);
@@ -185,21 +173,26 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
 
                 case Turn_To_Line: {
-                   imuRight(3,0.06);
-                    state = State.Drive_To_Line;
+                    rotateDegrees(18);
+                    resetEncoder();
+                    sleep(100);
+                    state = State.Drive;
                 }
                 break;
                 case Drive: {
-
+                    powerDrive(0.9);
+                    sleep(600);
+                    powerDrive(0.8);
                     sleep(400);
+                    powerDrive(0.7);
+                    sleep(200);
+                    powerDrive(0.6);
+                    sleep(200);
                     state = State.Drive_To_Line;
                 } break;
                 case Drive_To_Line:
                     if (odsReadingLinear <= 1.5 ) {
-                       // encoderDrive(SLOW_SPEED,0.15,0.15,3);
-                       powerDrive(0.1);
-                        sleep(200);
-                        powerDrive(0);
+                       encoderDrive(0.25,1.42,1.42,5);
                         state = State.Align;
                     }
                 else {
@@ -208,30 +201,51 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
 
                 case Align: { //Align to the beacon by turning -85 degrees
-                   imuRight(63,0.050);;
-                    state = State.WallALign;
-
+                    rotateDegrees(60);
+                    state = State.Balance;
                 }
-
                 break;
+                case Balance: {
+                    //balance();
+                    state = State.WallALign;
+                } break;
+                case Balance2: {
+                   // balance();
+                    state = State.WallAlign2;
+                } break;
                 case WallALign: {
-                    if (robot.rangeSensor.getDistance(DistanceUnit.CM) <= 12) {
-                        encoderDrive(STOP,0,0,0);
+                   // double cm2 = robot.rangeSensor2.getDistance(DistanceUnit.CM);
+                    double cm = robot.rangeSensor.getDistance(DistanceUnit.CM);
+                   /* if (cm == 255 || cm2 == 255) {
+                        powerDrive(0);
+                        continue;
+                    }*/
+                   if (cm > 8) {
+                       powerDrive(0.12);
+                       telemetry();
+                    } else if (cm <= 8) {
+                       right(0);
+                       left(0);
+                       resetEncoder();
                         state = State.Detect_Color;
-                    }
-                    else if (robot.rangeSensor.getDistance(DistanceUnit.CM) > 12) {
-                        powerDrive(0.1);
                     }
                 } break;
                 case WallAlign2: {
-                    if (robot.rangeSensor.getDistance(DistanceUnit.CM) <= 13) {
-                        encoderDrive(STOP,0,0,0);
+                    //double cm2 = robot.rangeSensor2.getDistance(DistanceUnit.CM);
+                    double cm = robot.rangeSensor.getDistance(DistanceUnit.CM);
+                   /* if (cm == 255 || cm2 == 255) {
+                        powerDrive(0);
+                        continue;
+                    }*/
+                    if (cm > 10 ) {
+                        powerDrive(0.12);
+                        telemetry();
+                    } else if (cm <= 9) {
+                        right(0);
+                        left(0);
                         state = State.Detect_Color2;
                     }
-                    else if (robot.rangeSensor.getDistance(DistanceUnit.CM) > 13) {
-                        robot.leftDrive(0.04);
-                        robot.rightDrive(0.1);
-                    }
+
                 } break;
                 case Detect_Color: {
                     if (robot.CS.blue() > robot.CS.red()) { //If blue is detected then go to the blue detected state
@@ -245,55 +259,40 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
                 case Red_Beacon: {
                     {
-                        robot.bleft.setPosition(1);
-                        robot.bright.setPosition(1);
-                        powerDrive(-0.3);
-                        sleep(400);
-                        robot.bright.setPosition(0);
-                        powerDrive(-0.2);
-                        sleep(900);
-                        powerDrive(0);
-                        state = State.Turn_To_Beacon;
+                            robot.bright.setPosition(0);
+                            sleep(2000);
+                            robot.bright.setPosition(0.75);
+                            state = State.Reverse;
                     }
                 }
                 break;
-
                 case Blue_Beacon: {
                     {
-                        robot.bleft.setPosition(0);
-                        robot.bright.setPosition(0);
-                        powerDrive(-0.3);
-                        sleep(400);
-                        robot.bleft.setPosition(1);
-                        powerDrive(-0.2);
-                        sleep(900);
-                        powerDrive(0);
-                        state = State.Turn_To_Beacon;
+                            robot.bleft.setPosition(1);
+                            sleep(2000);
+                            robot.bleft.setPosition(0.1);
+                            state = State.Reverse;
                     }
                 }
                 break;
-
                 case Reverse: {
-                    encoderDrive(SLOW_SPEED, -5, -5, 3);
+                   encoderDrive(0.8,-2.6,-2.6,5);
                     state = State.Turn_To_Beacon;
                 }
                 break;
                 case Turn_To_Beacon: { //Align to the beacon by turning -85 degrees
-                      imuRight(84,0.06);
+                    rotateDegrees(75);
                     state = State.Reverse2;
-
                 }
                 break;
                 case Reverse2: {
-                    powerDrive(0.45);
-                    sleep(250);
+                    powerDrive(0.8);
+                    sleep(650);
                     state = State.Drive_To_Line2;
                 } break;
                 case Drive_To_Line2: // Drive to the white line
-                    if (odsReadingLinear <= 1.5 || odsReadingLinear2 <= 1.5) { // Once the line is detected, stop the roobot and switch states
-                        powerDrive(0.1);
-                        sleep(800);
-                        powerDrive(0);
+                    if (odsReadingLinear2 <= 1.5) { // Once the line is detected, stop the roobot and switch states
+                        encoderDrive(0.25,1,1,5);
                         state = State.Align2;
                     }
                 {
@@ -301,8 +300,8 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Align2: {
-                   imuLeft(113,0.06);
-                    state = State.WallAlign2;
+                    rotateDegrees(-83);
+                    state = State.Balance2;
 
                 }
                 break;
@@ -318,35 +317,27 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Red_Beacon2: {
-                    robot.bright.setPosition(1);
-                    sleep(1000);
                     robot.bright.setPosition(0);
-                    sleep(700);
-                    robot.bright.setPosition(0.5);
-                    robot.bleft.setPosition(0.5);
-                    powerDrive(-0.2);
-                    sleep(900);
-                    powerDrive(0);
-                    state = State.Park;
+                    sleep(2000);
+                    robot.bright.setPosition(0.75);
+                    state = State.Stop;
                 }
                 break;
 
                 case Blue_Beacon2: {
-                    robot.bleft.setPosition(0);
-                    sleep(1000);
+                    left(0.1);
+                    sleep(650);
+                    left(0);
                     robot.bleft.setPosition(1);
-                    sleep(700);
-                    robot.bleft.setPosition(0.5);
-                    robot.bright.setPosition(0.5);
-                    powerDrive(-0.2);
-                    sleep(900);
-                    powerDrive(0);
-                    state = State.Park;
+                    sleep(2000);
+                    robot.bleft.setPosition(0.1);
+                    state = State.Stop;
                 }
                 break;
 
                 case Park: {
-                    encoderDrive(DRIVE_SPEED, -45, -45, 6);
+                    resetEncoder();
+                    encoderDrive(SLOW_SPEED, -45, -45, 6);
                     state = State.Stop;
                 }
                 break;
@@ -356,11 +347,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
             }
 
-           // telemetry.addData(imu.getName(), imu.telemetrize());
-            telemetry.addData("Roll",imu.getRoll());
-            telemetry.addData("Pitch",imu.getPitch());
-            telemetry.addData("TargetAngle", imu.getHeading());
-            telemetry.update();
+
 
 
         }
@@ -376,105 +363,39 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
      *  3) Driver stops the opmode running.
      */
 
-      public void imuRight(int degs, double speed){
-        double[] angles = imu.getAngles();
-        double yaw = angles[0];
-        double yawStart = yaw;
-        // this adds telemetry data using the telemetrize() method in the MasqAdafruitIMU class
-        while(Math.abs(yaw - ((yawStart - degs*.8) % 360)) > 2  && opModeIsActive()) {
-            telemetry.addData("Target",((yawStart - degs) % 360));
-            telemetry.addData("Progress",Math.abs(yaw - ((yawStart - degs) % 360)));
-            telemetry.update();
-            angles = imu.getAngles();
-            yaw = angles[0];
-            robot.ml1.setPower(-speed);
-            robot.mr1.setPower(speed);
-            robot.ml2.setPower(-speed);
-            robot.mr2.setPower(speed);
-        }
-    }
-  public void imuLeft(int degs, double speed){
-        double[] angles = imu.getAngles();
-        double yaw = angles[0];
-        double yawStart = yaw;
-        // this adds telemetry data using the telemetrize() method in the MasqAdafruitIMU class
-        while(Math.abs(yaw - ((yawStart + degs*.8) % 360)) > 3  && opModeIsActive()) {
-            telemetry.addData("Target",((yawStart - degs) % 360));
-            telemetry.addData("Progress",Math.abs(yaw - ((yawStart - degs) % 360)));
-            telemetry.update();
-            angles = imu.getAngles();
-            yaw = angles[0];
-            robot.ml1.setPower(speed);
-            robot.mr1.setPower(-speed);
-            robot.ml2.setPower(speed);
-            robot.mr2.setPower(-speed);
-        }
-    }
 
-    public void turnAbsolute(int target) throws InterruptedException {
-        MasqAdafruitIMU imu = new MasqAdafruitIMU("IMU", hardwareMap);
-        double[] angles = imu.getAngles();
-        double yaw = angles[0];
-        double pitch = angles[1];
-        double roll = angles[2];
-        double turnSpeed = 0.3;
-        while (Math.abs(yaw - target*.8) > 1 && opModeIsActive()) {
-            yaw = imu.getAngles()[0];
-            //Continue while the robot direction is further than three degrees from the target
-            if (yaw > target*.8) {  //if gyro is positive, we will turn right
-                robot.ml1.setPower(-turnSpeed);
-                robot.ml2.setPower(-turnSpeed);
-                robot.mr1.setPower(turnSpeed);
-                robot.mr2.setPower(turnSpeed);
-            }
-            if (yaw < target*.8) {  //if gyro is positive, we will turn left
-                robot.ml1.setPower(turnSpeed);
-                robot.ml2.setPower(turnSpeed);
-                robot.mr1.setPower(-turnSpeed);
-                robot.mr2.setPower(-turnSpeed);
-            }
-
-            if (Math.abs(yaw - target*.8) > 25) {
-
-                turnSpeed = 0.1;
-            } else {
-
-                turnSpeed = 0.07;
-            }
-
-
-            telemetry.addData(imu.getName(), imu.telemetrize());
-            telemetry.update();
-
-        }
-
-        {
-            robot.ml1.setPower(0);
-            robot.ml2.setPower(0);
-            robot.mr1.setPower(0);
-            robot.mr2.setPower(0);
-
-        }
-        //  sleep(250);   // optional pause after each move
-    }
-
-
-
-
-    public void noEncoder() throws InterruptedException {
-        robot.mr1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        robot.mr2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    public void noEncoder()  {
         robot.ml1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         robot.ml2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        robot.mr2.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        robot.mr1.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
     }
+    public void resetEncoder() {
+        robot.ml1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        robot.ml2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        robot.mr2.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        robot.mr1.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
-    public void powerDrive(double power) throws InterruptedException {
+        robot.ml1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.ml2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.mr2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.mr1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+    public void powerDrive(double power)  {
+        runEncoder();
         robot.mr1.setPower(power);
         robot.mr2.setPower(power);
         robot.ml1.setPower(power);
         robot.ml2.setPower(power);
     }
 
+    public void powerDriveNoEncoder(double power)  {
+        noEncoder();
+        robot.mr1.setPower(power);
+        robot.mr2.setPower(power);
+        robot.ml1.setPower(power);
+        robot.ml2.setPower(power);
+    }
 
 
     public void encoderDrive(double speed,
@@ -494,8 +415,8 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
             newRightTarget2 = robot.mr2.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
             newRightTarget = robot.mr1.getCurrentPosition() + (int) (rightInches * COUNTS_PER_INCH);
             robot.ml1.setTargetPosition(newLeftTarget);
-            robot.ml2.setTargetPosition(newLeftTarget);
-            robot.mr2.setTargetPosition(newRightTarget);
+            robot.ml2.setTargetPosition(newLeftTarget2);
+            robot.mr2.setTargetPosition(newRightTarget2);
             robot.mr1.setTargetPosition(newRightTarget);
 
             // Turn On RUN_TO_POSITION
@@ -523,7 +444,6 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                         robot.ml2.getCurrentPosition(),
                         robot.mr2.getCurrentPosition(),
                         robot.mr1.getCurrentPosition());
-                telemetry.addData("ODS linear", odsReadingLinear);
                 telemetry.update();
 
                 // Allow time for other processes to run.
@@ -543,35 +463,55 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
             robot.mr1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
     }
+    public void rotateDegrees(int desiredDegrees) throws InterruptedException {
+        // Sorry. You can't just spin around.
 
-    public void setFPower(double power)
-    {
-        robot.fly.setPower(power);
+        desiredDegrees %= 360;
+
+        if (1 >= Math.abs(desiredDegrees)) {
+            return;
+        }
+
+        robot.gyro.resetZAxisIntegrator();
+        robot.gyro2.resetZAxisIntegrator();
+
+        double power = 0.15;
+
+        boolean quit = false;
+        while(opModeIsActive() && !quit) {
+            runEncoder();
+            if (0 < desiredDegrees) { // turning right, so heading should get smaller
+                right(0.15);
+                left(-0.15);
+            } else { // turning left, so heading gets bigger.
+                right(-0.15);
+                left(0.15);
+            }
+            int value = robot.gyro.getIntegratedZValue() + robot.gyro2.getIntegratedZValue();
+            int zValue = value / 2;
+            final int currentHeading = - zValue;
+            final int headingDiff = Math.abs(desiredDegrees - currentHeading);
+
+            telemetry.addData("Headings", String.format("Target: %d, Current: %d", desiredDegrees, currentHeading));
+
+            quit = headingDiff <= 5;
+
+        }
+        right(0);
+        left(0);
+    }
+    public void runEncoder()  {
+        robot.ml1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.ml2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.mr2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        robot.mr1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
-    public void bangBang()
-    {
-        fVelocityTime = System.nanoTime();
-        fEncoder = robot.fly.getCurrentPosition();
-        fVelocity = (double)(fEncoder - fLastEncoder) / (fVelocityTime - fLastVelocityTime); //Use the encoder on the motor to force the flywheel to run at a constant speed
-
-        if(fVelocity >= (fTarget + tolerance)) //if the motor is equal to or greater than the target speed then keep it at .95
-        {
-            setFPower(.95);
-        }
-
-        else if(fVelocity < (fTarget - tolerance)) //if the motor goes below the target speed, force it to run at full power
-        {
-            setFPower(1);
-        }
-
-        fLastEncoder = fEncoder;
-        fLastVelocityTime = fVelocityTime;
-    } public void shoot(){
+ public void shoot()  {
         robot.sweep.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         robot.gate.setPosition(0.375);
-        robot.sweep.setPower(0.35);
-        sleep(1500);
+        robot.sweep.setPower(1);
+        sleep(2000);
         robot.gate.setPosition(1);
         robot.sweep.setPower(0);
     }
@@ -592,6 +532,74 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
 
     }
 
+    public void balance()  {
+        runtime.reset();
+        while (Math.abs(robot.rangeSensor.getDistance(DistanceUnit.CM) - robot.rangeSensor2.getDistance(DistanceUnit.CM)) > 1 && opModeIsActive() && runtime.seconds() < 3) {
+            double cm2 = robot.rangeSensor2.getDistance(DistanceUnit.CM);
+            double cm = robot.rangeSensor.getDistance(DistanceUnit.CM);
+            if (cm == 255 || cm2 == 255) {
+                right(0);
+                left(0);
+                continue;
+            }
+            if (cm > cm2) {
+                left(-1);
+                right(1);
+            }
+            if (cm < cm2) {
+                right(-1);
+                left(1);
+            }
+            right(0);
+            left(0);
+            telemetry();
+            idle();
+        }
+    }
+    public void driveStraight(int duration, double power) {
+        double leftSpeed; //Power to feed the motors
+        double rightSpeed;
+
+        double target = robot.gyro.getIntegratedZValue() + robot.gyro2.getIntegratedZValue()/2;  //Starting direction
+        double startPosition = robot.ml1.getCurrentPosition();  //Starting position
+        runEncoder();
+        while (robot.ml1.getCurrentPosition() < duration + startPosition && opModeIsActive()) {  //While we have not passed out intended distance
+            int value = robot.gyro.getIntegratedZValue() + robot.gyro2.getIntegratedZValue();
+            int zValue = value / 2;
+
+            leftSpeed = power + (zValue - target) / 100;  //Calculate speed for each side
+            rightSpeed = power - (zValue - target) / 100;  //See Gyro Straight video for detailed explanation
+
+            leftSpeed = Range.clip(leftSpeed, -1, 1);
+            rightSpeed = Range.clip(rightSpeed, -1, 1);
+
+            left(leftSpeed);
+            right(rightSpeed);
+
+            telemetry.addData("3. Distance to go", duration + startPosition - robot.ml1.getCurrentPosition());
+            telemetry.addData("Zval",zValue);
+            telemetry.update();
+
+        }
+
+        powerDrive(0);
+    }
+
+    public final void right(double power) //maybe not neccessary
+    {
+        robot.mr1.setPower(power);
+        robot.mr2.setPower(power);
+    }
+    public final void left(double power) //maybe not neccessary
+    {
+        robot.ml1.setPower(power);
+        robot.ml2.setPower(power);
+    }
+    public void telemetry(){
+        telemetry.addData("Range1", "%.2f cm", robot.rangeSensor.getDistance(DistanceUnit.CM));
+        telemetry.addData("Range2", "%.2f cm", robot.rangeSensor2.getDistance(DistanceUnit.CM));
+        telemetry.update();
+    }
 }
 
 

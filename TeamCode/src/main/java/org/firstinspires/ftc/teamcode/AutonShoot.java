@@ -38,6 +38,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -55,40 +57,28 @@ import org.firstinspires.ftc.teamcode.DashBoard;
  Only if close to corner vortex, if at the other spot then use AutonFar
  */
 
-@Autonomous(name="Red Auton Far (1B,2P)", group="Red")
-public class RedAutonFar extends LinearOpMode implements PID_Constants {
+@Autonomous(name="Blue Park and Shoot (0B,2P)", group="Blue")
+public class AutonShoot extends LinearOpMode implements PID_Constants {
 
     enum State {
         Drive_Forward,
         Shoot,
-        Turn_To_Line,
-        Drive,
-        Drive_To_Line,
-        Reverse_To_Line,
-        Align,
-        WallALign,
-        WallAlign2,
-        Align2,
-        Detect_Color,
-        Detect_Color2,
-        Red_Beacon2,
-        Blue_Beacon2,
-        Red_Beacon,
-        Blue_Beacon,
-        Reverse,
-        Reverse2,
-        Turn_To_Beacon,
-        Reverse_To_Line2,
-        Drive_To_Line2,
         Park,
         Stop,
     }
 
     State state;
 
+    private String particlePref;
+    private String beaconPref;
+    private String capBallPref;
+    private String parkingPref;
+    private String alliance;
+
+
+
     /* Declare OpMode members. */
     LBHW robot = new LBHW ();
-    AdafruitIMU imu = new AdafruitIMU("IMU");
     private ElapsedTime runtime = new ElapsedTime();
 
     static final double COUNTS_PER_MOTOR_REV = 1120;    // eg: TETRIX Motor Encoder
@@ -163,22 +153,29 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
 
 
         // wait for the start button to be pressed.
-
+        getAutonomousPrefs();
+        telemetry.addLine("Particles: " + particlePref);
+        telemetry.addLine("Beacons: " + beaconPref);
+        telemetry.addLine("Cap Ball: " + capBallPref);
+        telemetry.addLine("Parking: " + parkingPref);
+        telemetry.addLine("Alliance: " + alliance);
+        telemetry.update();
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         while (opModeIsActive()) {
 
-            odsReadngRaw = robot.ODS.getRawLightDetected();
-            odsReadingLinear = Math.pow(odsReadngRaw, -0.5);
-            odsReadngRaw2 = robot.ODS2.getRawLightDetected();
-            odsReadingLinear2 = Math.pow(odsReadngRaw2, -0.5);
+
+            if(alliance.equals("Blue Alliance")) {
+                state = state.Drive_Forward;
+            }
 
             switch (state) {
                 case Drive_Forward: {  //Drive forward for 0.7 seconds then stop and switch states to the turning coder
+                    sleep(10000);
                     voltageshoot();
                     robot.gate.setPosition(1);
-                    encoderDrive(SLOW_SPEED, 5, 5.5, 3);
+                    encoderDrive(SLOW_SPEED, 10, 10, 3);
                     state = State.Shoot;
                 }
                 break;
@@ -187,167 +184,11 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                     robot.bright.setPosition(1);
                     robot.bleft.setPosition(1);
                     robot.fly.setPower(0);
-                    state = State.Turn_To_Line;
-                }
-                break;
-
-                case Turn_To_Line: {
-
-                    imuLeft(25,0.06);
-                    state = State.Drive_To_Line;
-                }
-                break;
-                case Drive: {
-                    powerDrive(0.15);
-                    sleep(1500);
-                    sleep(1100);
-                    powerDrive(0);
-                    state = State.WallALign;
-                } break;
-                case Drive_To_Line:
-                    if (odsReadingLinear2 <= 1.5 ) {
-                        // encoderDrive(SLOW_SPEED,0.15,0.15,3);
-                        powerDrive(0.1);
-                        sleep(500);
-                        powerDrive(0);
-                        state = State.Align;
-                    }
-                    else {
-                        powerDrive(0.25);
-                    }
-                    break;
-
-                case Align: { //Align to the beacon by turning -85 degrees
-                    imuLeft(64,0.050);
-                    state = State.Drive;
-
-                }
-
-                break;
-                case WallALign: {
-                    if (robot.rangeSensor.getDistance(DistanceUnit.CM) <= 12) {
-                        encoderDrive(STOP,0,0,0);
-                        state = State.Detect_Color;
-                    }
-                    else if (robot.rangeSensor.getDistance(DistanceUnit.CM) > 12) {
-                        powerDrive(0.1);
-                    }
-                } break;
-                case WallAlign2: {
-                    if (robot.rangeSensor.getDistance(DistanceUnit.CM) <= 13) {
-                        encoderDrive(STOP,0,0,0);
-                        state = State.Detect_Color2;
-                    }
-                    else if (robot.rangeSensor.getDistance(DistanceUnit.CM) > 13) {
-                    }
-                } break;
-                case Detect_Color: {
-                    if (robot.CS.blue() > robot.CS.red()) { //If blue is detected then go to the blue detected state
-                        state = State.Blue_Beacon;
-                    } else if (robot.CS.blue() < robot.CS.red()) { //If red is detected then go to the red detected state
-                        state = State.Red_Beacon;
-                    } else {
-                        encoderDrive(STOP,0,0,0);//if nothing is detected then stop the motors
-                    }
-                }
-                break;
-                case Red_Beacon: {
-                    {
-                        powerDrive(-0.15);
-                        sleep(1200);
-                        powerDrive(0);
-                        state = State.Turn_To_Beacon;
-                    }
-                }
-                break;
-
-                case Blue_Beacon: {
-                    {
-                        sleep(6000);
-                        powerDrive(0.15);
-                        sleep(900);
-                        powerDrive(-0.15);
-                        sleep(1200);
-                        powerDrive(0);
-                        state = State.Turn_To_Beacon;
-                    }
-                }
-                break;
-
-                case Reverse: {
-                    encoderDrive(SLOW_SPEED, -5, -5, 3);
-                    state = State.Turn_To_Beacon;
-                }
-                break;
-                case Turn_To_Beacon: { //Align to the beacon by turning -85 degrees
-                    imuRight(21 ,0.1);
-                    state = State.Park;
-
-                }
-                break;
-                case Reverse2: {
-                    powerDrive(0.45);
-                    sleep(250);
-                    state = State.Drive_To_Line2;
-                } break;
-                case Drive_To_Line2: // Drive to the white line
-                    if (odsReadingLinear <= 1.5 || odsReadingLinear2 <= 1.5) { // Once the line is detected, stop the roobot and switch states
-                        powerDrive(0.1);
-                        sleep(800);
-                        powerDrive(0);
-                        state = State.Align2;
-                    }
-                {
-                    powerDrive(0.25);
-                }
-                break;
-                case Align2: {
-                    imuLeft(113,0.06);
-                    state = State.WallAlign2;
-
-                }
-                break;
-                case Detect_Color2: {
-                    if (robot.CS.blue() > robot.CS.red()) { //If blue is detected then go to the blue detected state
-                        state = State.Blue_Beacon2;
-                    } else if (robot.CS.blue() < robot.CS.red()) { //If red is detected then go to the red detected state
-                        state = State.Red_Beacon2;
-                    } else { //if nothing is detected then stop the motors
-                        encoderDrive(STOP,0,0,0);
-                    }
-
-                }
-                break;
-                case Red_Beacon2: {
-                    robot.bright.setPosition(1);
-                    sleep(1000);
-                    robot.bright.setPosition(0);
-                    sleep(700);
-                    robot.bright.setPosition(0.5);
-                    robot.bleft.setPosition(0.5);
-                    powerDrive(-0.2);
-                    sleep(900);
-                    powerDrive(0);
                     state = State.Park;
                 }
                 break;
-
-                case Blue_Beacon2: {
-                    robot.bleft.setPosition(0);
-                    sleep(1000);
-                    robot.bleft.setPosition(1);
-                    sleep(700);
-                    robot.bleft.setPosition(0.5);
-                    robot.bright.setPosition(0.5);
-                    powerDrive(-0.2);
-                    sleep(900);
-                    powerDrive(0);
-                    state = State.Park;
-                }
-                break;
-
                 case Park: {
-                    encoderDrive(SLOW_SPEED, -45, -45, 6);
+                    encoderDrive(SLOW_SPEED, 25, 25, 6);
                     state = State.Stop;
                 }
                 break;
@@ -357,108 +198,9 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 break;
             }
 
-            // telemetry.addData(imu.getName(), imu.telemetrize());
-            telemetry.addData("Roll",imu.getRoll());
-            telemetry.addData("Pitch",imu.getPitch());
-            telemetry.addData("TargetAngle", imu.getHeading());
-            telemetry.update();
-
-
         }
 
     }
-
-    /*
-     *  Method to perfmorm a relative move, based on encoder counts.
-     *  Encoders are not reset as the move is based on the current position.
-     *  Move will stop if any of three conditions occur:
-     *  1) Move gets to the desired position
-     *  2) Move runs out of time
-     *  3) Driver stops the opmode running.
-     */
-
-    public void imuRight(int degs, double speed){
-        double[] angles = imu.getAngles();
-        double yaw = angles[0];
-        double yawStart = yaw;
-        // this adds telemetry data using the telemetrize() method in the MasqAdafruitIMU class
-        while(Math.abs(yaw - ((yawStart - degs*.8) % 360)) > 2  && opModeIsActive()) {
-            telemetry.addData("Target",((yawStart - degs) % 360));
-            telemetry.addData("Progress",Math.abs(yaw - ((yawStart - degs) % 360)));
-            telemetry.update();
-            angles = imu.getAngles();
-            yaw = angles[0];
-            robot.ml1.setPower(-speed);
-            robot.mr1.setPower(speed);
-            robot.ml2.setPower(-speed);
-            robot.mr2.setPower(speed);
-        }
-    }
-    public void imuLeft(int degs, double speed){
-        double[] angles = imu.getAngles();
-        double yaw = angles[0];
-        double yawStart = yaw;
-        // this adds telemetry data using the telemetrize() method in the MasqAdafruitIMU class
-        while(Math.abs(yaw - ((yawStart + degs*.8) % 360)) > 3  && opModeIsActive()) {
-            telemetry.addData("Target",((yawStart - degs) % 360));
-            telemetry.addData("Progress",Math.abs(yaw - ((yawStart - degs) % 360)));
-            telemetry.update();
-            angles = imu.getAngles();
-            yaw = angles[0];
-            robot.ml1.setPower(speed);
-            robot.mr1.setPower(-speed);
-            robot.ml2.setPower(speed);
-            robot.mr2.setPower(-speed);
-        }
-    }
-
-    public void turnAbsolute(int target) throws InterruptedException {
-        MasqAdafruitIMU imu = new MasqAdafruitIMU("IMU", hardwareMap);
-        double[] angles = imu.getAngles();
-        double yaw = angles[0];
-        double pitch = angles[1];
-        double roll = angles[2];
-        double turnSpeed = 0.3;
-        while (Math.abs(yaw - target*.8) > 1 && opModeIsActive()) {
-            yaw = imu.getAngles()[0];
-            //Continue while the robot direction is further than three degrees from the target
-            if (yaw > target*.8) {  //if gyro is positive, we will turn right
-                robot.ml1.setPower(-turnSpeed);
-                robot.ml2.setPower(-turnSpeed);
-                robot.mr1.setPower(turnSpeed);
-                robot.mr2.setPower(turnSpeed);
-            }
-            if (yaw < target*.8) {  //if gyro is positive, we will turn left
-                robot.ml1.setPower(turnSpeed);
-                robot.ml2.setPower(turnSpeed);
-                robot.mr1.setPower(-turnSpeed);
-                robot.mr2.setPower(-turnSpeed);
-            }
-
-            if (Math.abs(yaw - target*.8) > 25) {
-
-                turnSpeed = 0.1;
-            } else {
-
-                turnSpeed = 0.07;
-            }
-
-
-            telemetry.addData(imu.getName(), imu.telemetrize());
-            telemetry.update();
-
-        }
-
-        {
-            robot.ml1.setPower(0);
-            robot.ml2.setPower(0);
-            robot.mr1.setPower(0);
-            robot.mr2.setPower(0);
-
-        }
-        //  sleep(250);   // optional pause after each move
-    }
-
 
 
 
@@ -593,6 +335,17 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
         motorOut = Range.clip(motorOut, 0, 1); //make sure the motor doesn't go at a speed above 1
         setMotorPower(robot.fly, motorOut); // set the adjusted power to the motor
 
+    }
+
+    private void getAutonomousPrefs()
+    {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(hardwareMap.appContext);
+
+        particlePref = preferences.getString("How Many Particles Should We Shoot?", "");
+        beaconPref = preferences.getString("Which beacons should we activate?", "");
+        capBallPref = preferences.getString("Should we bump the cap ball off the center vortex?", "");
+        parkingPref = preferences.getString("Where should we park?", "");
+        alliance = preferences.getString("Which alliance are we on?", "");
     }
 
 }

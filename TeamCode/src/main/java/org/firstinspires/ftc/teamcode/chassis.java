@@ -29,7 +29,7 @@ public class chassis extends OpMode {
     public chassis() {
 
     }
-    double TARGET_VOLTAGE = 12.5;
+    double TARGET_VOLTAGE = 12.2;
     double voltage = 0;
     double kP = 0.18;
     boolean IS_GATE_OPEN = false;
@@ -67,8 +67,11 @@ public class chassis extends OpMode {
         sweep.setDirection(DcMotor.Direction.REVERSE);
         ml1.setDirection(DcMotor.Direction.REVERSE);
         mr1.setDirection(DcMotor.Direction.REVERSE);
+        lift2.setDirection(DcMotor.Direction.REVERSE);
         sweep.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-
+        bright.setPosition(0.75);
+        bleft.setPosition(0.1);
+        gate.setPosition(0.95);
 
     }
 
@@ -108,44 +111,40 @@ public class chassis extends OpMode {
 
         if (gamepad1.a || gamepad2.a) {
             IS_GATE_OPEN = false; //set is gate open to false
-            gate.setPosition(1); //keep gate closed
+            gate.setPosition(0.95); //keep gate closed
         } else if (gamepad1.b || gamepad2.b) {
             IS_GATE_OPEN = true; //set is gate open to true
             gate.setPosition(0.375); //open the gate
+        }
+        if (gamepad1.dpad_up) {
+            bright.setPosition(0);
+            bleft.setPosition(0);
+        }
+        if (gamepad1.dpad_down) {
+            bright.setPosition(1);
+            bleft.setPosition(1);
         }
         if (gamepad1.left_bumper || gamepad2.left_bumper)
             sweep.setPower(-1);
         else if (gamepad1.left_trigger > 0.25 || gamepad2.left_trigger > 0.25)
             sweep.setPower(1);
         else if (IS_GATE_OPEN) { //if IS_GATE_OPEN is set to true then run the sweeper at 0.35
-            sweep.setPower(0.35);
+            sweep.setPower(1);
         } else
             sweep.setPower(0);
 
-        if (gamepad1.dpad_left) {
-            bleft.setPosition(0);
-        } else if (gamepad1.dpad_right) {
-            bleft.setPosition(1);
-        } else if (gamepad1.x) {
-            bright.setPosition(1);
-        } else if (gamepad1.y) {
-            bright.setPosition(0);
-        }
-        else {
-            bleft.setPosition(0.5);
-            bright.setPosition(0.5);
-        }
-
-        if (gamepad1.dpad_up) {
+        if (gamepad2.dpad_up) {
             lift1.setPower(1);
             lift2.setPower(1);
-        } else if (gamepad1.dpad_down) {
+        } else if (gamepad2.dpad_down) {
             lift1.setPower(-1);
             lift2.setPower(-1);
-        } else {
+        } else
             lift1.setPower(0);
             lift2.setPower(0);
-        }
+
+
+
         telemetry.addData("left tgt pwr", "left  pwr: " + String.format("%.2f", left));
         telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
         telemetry.addData("Voltage",batteryVoltage());
@@ -221,7 +220,7 @@ public class chassis extends OpMode {
     public void voltageshoot() {
         voltage = batteryVoltage();
         double error = TARGET_VOLTAGE - voltage;
-        double motorOut = (error * kP) + .82;
+        double motorOut = (error * kP) + .7;
         motorOut = Range.clip(motorOut, 0, 1);
         setMotorPower(fly, motorOut);
     }
