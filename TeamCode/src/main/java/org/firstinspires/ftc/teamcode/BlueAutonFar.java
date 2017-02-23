@@ -154,9 +154,10 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                     resetEncoder();
                     sleep(100);
                     voltageshoot();
-                    robot.gate.setPosition(1);
-                    driveStraight(1,0.35);
-                    powerDrive(0);
+                    driveStraight(1200,0.4);
+                    right(0.1);
+                    sleep(900);
+                    right(0);
                     state = State.Shoot;
                 }
                 break;
@@ -174,14 +175,12 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
 
                 case Turn_To_Line: {
                     rotateDegrees(18);
-                    resetEncoder();
-                    sleep(100);
                     state = State.Drive;
                 }
                 break;
                 case Drive: {
                     powerDrive(0.9);
-                    sleep(600);
+                    sleep(800);
                     powerDrive(0.8);
                     sleep(400);
                     powerDrive(0.7);
@@ -192,7 +191,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 } break;
                 case Drive_To_Line:
                     if (odsReadingLinear <= 1.5 ) {
-                       encoderDrive(0.25,1.42,1.42,5);
+                       encoderDrive(0.25,1.45,1.45,5);
                         state = State.Align;
                     }
                 else {
@@ -215,11 +214,11 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 } break;
                 case WallALign: {
                    // double cm2 = robot.rangeSensor2.getDistance(DistanceUnit.CM);
-                    double cm = robot.rangeSensor.getDistance(DistanceUnit.CM);
-                   /* if (cm == 255 || cm2 == 255) {
+                    double cm = robot.rangeSensor2.getDistance(DistanceUnit.CM);
+                    if (cm == 255) {
                         powerDrive(0);
                         continue;
-                    }*/
+                    }
                    if (cm > 8) {
                        powerDrive(0.12);
                        telemetry();
@@ -227,17 +226,18 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                        right(0);
                        left(0);
                        resetEncoder();
+                       sleep(50);
                         state = State.Detect_Color;
                     }
                 } break;
                 case WallAlign2: {
                     //double cm2 = robot.rangeSensor2.getDistance(DistanceUnit.CM);
-                    double cm = robot.rangeSensor.getDistance(DistanceUnit.CM);
-                   /* if (cm == 255 || cm2 == 255) {
+                    double cm = robot.rangeSensor2.getDistance(DistanceUnit.CM);
+                    if (cm == 255) {
                         powerDrive(0);
                         continue;
-                    }*/
-                    if (cm > 10 ) {
+                    }
+                    if (cm > 9 ) {
                         powerDrive(0.12);
                         telemetry();
                     } else if (cm <= 9) {
@@ -276,12 +276,12 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Reverse: {
-                   encoderDrive(0.8,-2.6,-2.6,5);
+                   encoderDrive(0.7,-2.8,-2.8,5);
                     state = State.Turn_To_Beacon;
                 }
                 break;
                 case Turn_To_Beacon: { //Align to the beacon by turning -85 degrees
-                    rotateDegrees(75);
+                    rotateDegrees(77);
                     state = State.Reverse2;
                 }
                 break;
@@ -292,7 +292,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 } break;
                 case Drive_To_Line2: // Drive to the white line
                     if (odsReadingLinear2 <= 1.5) { // Once the line is detected, stop the roobot and switch states
-                        encoderDrive(0.25,1,1,5);
+                        encoderDrive(0.25,0.9,0.9,5);
                         state = State.Align2;
                     }
                 {
@@ -300,7 +300,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Align2: {
-                    rotateDegrees(-83);
+                    rotateDegrees(-85);
                     state = State.Balance2;
 
                 }
@@ -308,7 +308,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 case Detect_Color2: {
                     if (robot.CS.blue() > robot.CS.red()) { //If blue is detected then go to the blue detected state
                         state = State.Blue_Beacon2;
-                    } else if (robot.CS.blue() < robot.CS.red()) { //If red is detected then go to the red detected state
+                     } else if (robot.CS.blue() < robot.CS.red()) { //If red is detected then go to the red detected state
                         state = State.Red_Beacon2;
                     } else { //if nothing is detected then stop the motors
                         encoderDrive(STOP,0,0,0);
@@ -317,6 +317,9 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Red_Beacon2: {
+                    right(0.12);
+                    sleep(650);
+                    right(0);
                     robot.bright.setPosition(0);
                     sleep(2000);
                     robot.bright.setPosition(0.75);
@@ -325,8 +328,8 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
 
                 case Blue_Beacon2: {
-                    left(0.1);
-                    sleep(650);
+                    left(0.12);
+                    sleep(550);
                     left(0);
                     robot.bleft.setPosition(1);
                     sleep(2000);
@@ -509,7 +512,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
 
  public void shoot()  {
         robot.sweep.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.gate.setPosition(0.375);
+        robot.gate.setPosition(0.1);
         robot.sweep.setPower(1);
         sleep(2000);
         robot.gate.setPosition(1);
@@ -561,9 +564,9 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
         double rightSpeed;
 
         double target = robot.gyro.getIntegratedZValue() + robot.gyro2.getIntegratedZValue()/2;  //Starting direction
-        double startPosition = robot.ml1.getCurrentPosition();  //Starting position
+        double startPosition = robot.ml1.getCurrentPosition() + robot.mr1.getCurrentPosition()/2;  //Starting position
         runEncoder();
-        while (robot.ml1.getCurrentPosition() < duration + startPosition && opModeIsActive()) {  //While we have not passed out intended distance
+        while (robot.ml1.getCurrentPosition()+robot.mr1.getCurrentPosition()/2 < duration + startPosition && opModeIsActive()) {  //While we have not passed out intended distance
             int value = robot.gyro.getIntegratedZValue() + robot.gyro2.getIntegratedZValue();
             int zValue = value / 2;
 
