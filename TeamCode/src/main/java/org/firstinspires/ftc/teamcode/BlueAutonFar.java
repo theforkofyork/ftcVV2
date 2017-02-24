@@ -174,7 +174,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
 
                 case Turn_To_Line: {
-                    rotateDegrees(18);
+                    rotateDegrees(16);
                     state = State.Drive;
                 }
                 break;

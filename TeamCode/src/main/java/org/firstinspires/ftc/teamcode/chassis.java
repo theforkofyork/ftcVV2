@@ -69,7 +69,7 @@ public class chassis extends OpMode {
         sweep.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         bright.setPosition(0.75);
         bleft.setPosition(0.1);
-        gate.setPosition(0.9);
+        gate.setPosition(0.93);
 
     }
 
@@ -109,10 +109,10 @@ public class chassis extends OpMode {
 
         if (gamepad1.a || gamepad2.a) {
             IS_GATE_OPEN = false; //set is gate open to false
-            gate.setPosition(0.9); //keep gate closed
+            gate.setPosition(0.93); //keep gate closed
         } else if (gamepad1.b || gamepad2.b) {
             IS_GATE_OPEN = true; //set is gate open to true
-            gate.setPosition(0.8); //open the gate
+            gate.setPosition(0.76); //open the gate
         }
         if (gamepad1.dpad_up) {
             bright.setPosition(0);
@@ -127,7 +127,7 @@ public class chassis extends OpMode {
         else if (gamepad1.left_trigger > 0.25 || gamepad2.left_trigger > 0.25)
             sweep.setPower(1);
         else if (IS_GATE_OPEN) { //if IS_GATE_OPEN is set to true then run the sweeper at 0.35
-            sweep.setPower(0.9);
+            sweep.setPower(1);
         } else
             sweep.setPower(0);
 
