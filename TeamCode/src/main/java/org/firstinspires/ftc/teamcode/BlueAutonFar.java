@@ -467,19 +467,13 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
         }
     }
     public void rotateDegrees(int desiredDegrees) throws InterruptedException {
-        // Sorry. You can't just spin around.
-
         desiredDegrees %= 360;
-
         if (1 >= Math.abs(desiredDegrees)) {
             return;
         }
-
         robot.gyro.resetZAxisIntegrator();
         robot.gyro2.resetZAxisIntegrator();
-
         double power = 0.15;
-
         boolean quit = false;
         while(opModeIsActive() && !quit) {
             runEncoder();
@@ -494,11 +488,8 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
             int zValue = value / 2;
             final int currentHeading = - zValue;
             final int headingDiff = Math.abs(desiredDegrees - currentHeading);
-
             telemetry.addData("Headings", String.format("Target: %d, Current: %d", desiredDegrees, currentHeading));
-
             quit = headingDiff <= 5;
-
         }
         right(0);
         left(0);
