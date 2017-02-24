@@ -153,7 +153,9 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 case Drive_Forward: {  //Drive forward for 0.7 seconds then stop and switch states to the turning coder
                     resetEncoder();
                     voltageshoot();
-                    driveStraight(1200,0.4);
+                    powerDrive(0.4);
+                    sleep(1000);
+                    powerDrive(0);
                     left(-0.45);
                     sleep(280);
                     left(0);
@@ -164,31 +166,30 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 case Shoot: {
                     shoot();
                     robot.fly.setPower(0);
+                    robot.sweep.setPower(0);
                     state = State.Turn_To_Line;
                 }
                 break;
 
                 case Turn_To_Line: {
-                    rotateDegrees(-27);
+                    rotateDegrees(-21);
                     state = State.Drive;
                 }
                 break;
                 case Drive: {
-                    powerDrive(1);
-                    sleep(800);
                     powerDrive(0.9);
-                    sleep(300);
+                    sleep(800);
                     powerDrive(0.8);
-                    sleep(100);
+                    sleep(400);
                     powerDrive(0.7);
-                    sleep(50);
+                    sleep(200);
                     powerDrive(0.6);
-                    sleep(50);
+                    sleep(200);
                     state = State.Drive_To_Line;
                 } break;
                 case Drive_To_Line:
                     if (odsReadingLinear2 <= 1.5 ) {
-                        encoderDrive(0.25,1.58,1.58,5);
+                        encoderDrive(0.25,1.6,1.6,5);
                         state = State.Align;
                     }
                     else {
@@ -196,8 +197,8 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                     }
                     break;
 
-                case Align: { //Align to the beacon by turning -85 degrees
-                    rotateDegrees(-64);
+                case Align: { //Align// to the beacon by turning -85 degrees
+                    rotateDegrees(-61);
                     state = State.Balance;
                 }
                 break;
@@ -212,10 +213,10 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 case WallALign: {
                     // double cm2 = robot.rangeSensor2.getDistance(DistanceUnit.CM);
                     double cm = robot.rangeSensor2.getDistance(DistanceUnit.CM);
-                    if (cm > 7) {
+                    if (cm > 9) {
                         powerDrive(0.13);
                         telemetry();
-                    } else if (cm <= 7) {
+                    } else if (cm <= 9) {
                         right(0);
                         left(0);
                         resetEncoder();
@@ -226,10 +227,10 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 case WallAlign2: {
                     //double cm2 = robot.rangeSensor2.getDistance(DistanceUnit.CM);
                     double cm = robot.rangeSensor2.getDistance(DistanceUnit.CM);
-                    if (cm > 7 ) {
+                    if (cm > 9 ) {
                         powerDrive(0.13);
                         telemetry();
-                    } else if (cm <= 7 ) {
+                    } else if (cm <= 9 ) {
                         right(0);
                         left(0);
                         state = State.Detect_Color2;
@@ -266,12 +267,12 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Reverse: {
-                    encoderDrive(0.8,-2.8,-2.8,5);
+                    encoderDrive(0.8,-2.5,-2.5,5);
                     state = State.Turn_To_Beacon;
                 }
                 break;
                 case Turn_To_Beacon: { //Align to the beacon by turning -85 degrees
-                    rotateDegrees(-86);
+                    rotateDegrees(-82);
                     state = State.Reverse2;
                 }
                 break;
@@ -284,7 +285,7 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 } break;
                 case Drive_To_Line2: // Drive to the white line
                     if (odsReadingLinear <= 1.5) { // Once the line is detected, stop the roobot and switch states
-                        encoderDrive(0.25,0.8,0.8,5);
+                        encoderDrive(0.25,1.3,1.3,5);
                         state = State.Align2;
                     }
                 {
@@ -292,7 +293,7 @@ public class RedAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Align2: {
-                    rotateDegrees(83);
+                    rotateDegrees(85);
                     state = State.Balance2;
 
                 }

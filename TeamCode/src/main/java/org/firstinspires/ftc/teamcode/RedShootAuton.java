@@ -160,19 +160,23 @@ public class RedShootAuton extends LinearOpMode implements PID_Constants {
                 break;
                 case Shoot: {
                     shoot();
-                    robot.bright.setPosition(1);
-                    robot.bleft.setPosition(1);
+                    robot.bright.setPosition(0.75);
+                    robot.bleft.setPosition(0.1);
                     robot.fly.setPower(0);
                     state = State.Park;
                 }
                 break;
                 case Park: {
                     encoderDrive(SLOW_SPEED, 15, 15, 6);
+                    robot.bright.setPosition(0.75);
+                    robot.bleft.setPosition(0.1);
                     state = State.Stop;
                 }
                 break;
                 case Stop: {
                     encoderDrive(STOP, 0, 0, 0);
+                    robot.bright.setPosition(0.75);
+                    robot.bleft.setPosition(0.1);
                 }
                 break;
             }

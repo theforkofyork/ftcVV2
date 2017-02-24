@@ -38,8 +38,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.I2cAddr;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -68,14 +66,6 @@ public class AutonShoot extends LinearOpMode implements PID_Constants {
     }
 
     State state;
-
-    private String particlePref;
-    private String beaconPref;
-    private String capBallPref;
-    private String parkingPref;
-    private String alliance;
-
-
 
     /* Declare OpMode members. */
     LBHW robot = new LBHW ();
@@ -137,10 +127,9 @@ public class AutonShoot extends LinearOpMode implements PID_Constants {
         robot.mr2.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         robot.mr1.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        robot.bright.setPosition(1);
-        robot.bleft.setPosition(1);
-        robot.gate.setPosition(1);
-
+        robot.bright.setPosition(0.75);
+        robot.bleft.setPosition(0.1);
+        robot.gate.setPosition(0.95);
 
 
         //  DashBoard dash = new DashBoard(telemetry);
@@ -153,22 +142,12 @@ public class AutonShoot extends LinearOpMode implements PID_Constants {
 
 
         // wait for the start button to be pressed.
-        getAutonomousPrefs();
-        telemetry.addLine("Particles: " + particlePref);
-        telemetry.addLine("Beacons: " + beaconPref);
-        telemetry.addLine("Cap Ball: " + capBallPref);
-        telemetry.addLine("Parking: " + parkingPref);
-        telemetry.addLine("Alliance: " + alliance);
-        telemetry.update();
+
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         while (opModeIsActive()) {
 
-
-            if(alliance.equals("Blue Alliance")) {
-                state = state.Drive_Forward;
-            }
 
             switch (state) {
                 case Drive_Forward: {  //Drive forward for 0.7 seconds then stop and switch states to the turning coder
@@ -181,19 +160,23 @@ public class AutonShoot extends LinearOpMode implements PID_Constants {
                 break;
                 case Shoot: {
                     shoot();
-                    robot.bright.setPosition(1);
-                    robot.bleft.setPosition(1);
+                    robot.bright.setPosition(0.75);
+                    robot.bleft.setPosition(0.1);
                     robot.fly.setPower(0);
                     state = State.Park;
                 }
                 break;
                 case Park: {
-                    encoderDrive(SLOW_SPEED, 25, 25, 6);
+                    encoderDrive(SLOW_SPEED, 15, 15, 6);
+                    robot.bright.setPosition(0.75);
+                    robot.bleft.setPosition(0.1);
                     state = State.Stop;
                 }
                 break;
                 case Stop: {
                     encoderDrive(STOP, 0, 0, 0);
+                    robot.bright.setPosition(0.75);
+                    robot.bleft.setPosition(0.1);
                 }
                 break;
             }
@@ -312,10 +295,8 @@ public class AutonShoot extends LinearOpMode implements PID_Constants {
         fLastVelocityTime = fVelocityTime;
     } public void shoot(){
         robot.sweep.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        robot.bright.setPosition(0);
-        robot.bleft.setPosition(0);
         robot.gate.setPosition(0.375);
-        robot.sweep.setPower(0.4);
+        robot.sweep.setPower(1);
         sleep(4000);
         robot.gate.setPosition(1);
         robot.sweep.setPower(0);
@@ -335,17 +316,6 @@ public class AutonShoot extends LinearOpMode implements PID_Constants {
         motorOut = Range.clip(motorOut, 0, 1); //make sure the motor doesn't go at a speed above 1
         setMotorPower(robot.fly, motorOut); // set the adjusted power to the motor
 
-    }
-
-    private void getAutonomousPrefs()
-    {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(hardwareMap.appContext);
-
-        particlePref = preferences.getString("How Many Particles Should We Shoot?", "");
-        beaconPref = preferences.getString("Which beacons should we activate?", "");
-        capBallPref = preferences.getString("Should we bump the cap ball off the center vortex?", "");
-        parkingPref = preferences.getString("Where should we park?", "");
-        alliance = preferences.getString("Which alliance are we on?", "");
     }
 
 }

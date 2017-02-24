@@ -154,9 +154,11 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                     resetEncoder();
                     sleep(100);
                     voltageshoot();
-                    driveStraight(1200,0.4);
-                    right(0.1);
-                    sleep(900);
+                    powerDrive(0.4);
+                    sleep(800);
+                    powerDrive(0);
+                    right(0.15);
+                    sleep(400);
                     right(0);
                     state = State.Shoot;
                 }
@@ -174,7 +176,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
 
                 case Turn_To_Line: {
-                    rotateDegrees(16);
+                    rotateDegrees(22);
                     state = State.Drive;
                 }
                 break;
@@ -191,7 +193,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 } break;
                 case Drive_To_Line:
                     if (odsReadingLinear <= 1.5 ) {
-                       encoderDrive(0.25,1.45,1.45,5);
+                       encoderDrive(0.25,1.82,1.82,5);
                         state = State.Align;
                     }
                 else {
@@ -200,7 +202,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
 
                 case Align: { //Align to the beacon by turning -85 degrees
-                    rotateDegrees(60);
+                    rotateDegrees(62);
                     state = State.Balance;
                 }
                 break;
@@ -219,10 +221,10 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                         powerDrive(0);
                         continue;
                     }
-                   if (cm > 8) {
-                       powerDrive(0.12);
+                   if (cm > 9) {
+                       powerDrive(0.13);
                        telemetry();
-                    } else if (cm <= 8) {
+                    } else if (cm <= 9) {
                        right(0);
                        left(0);
                        resetEncoder();
@@ -238,7 +240,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                         continue;
                     }
                     if (cm > 9 ) {
-                        powerDrive(0.12);
+                        powerDrive(0.13);
                         telemetry();
                     } else if (cm <= 9) {
                         right(0);
@@ -276,23 +278,23 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Reverse: {
-                   encoderDrive(0.7,-2.8,-2.8,5);
+                   encoderDrive(0.7,-2.4,-2.4,5);
                     state = State.Turn_To_Beacon;
                 }
                 break;
                 case Turn_To_Beacon: { //Align to the beacon by turning -85 degrees
-                    rotateDegrees(77);
+                    rotateDegrees(80);
                     state = State.Reverse2;
                 }
                 break;
                 case Reverse2: {
                     powerDrive(0.8);
-                    sleep(650);
+                    sleep(750);
                     state = State.Drive_To_Line2;
                 } break;
                 case Drive_To_Line2: // Drive to the white line
                     if (odsReadingLinear2 <= 1.5) { // Once the line is detected, stop the roobot and switch states
-                        encoderDrive(0.25,0.9,0.9,5);
+                        encoderDrive(0.25,0.55,0.55,5);
                         state = State.Align2;
                     }
                 {
@@ -300,7 +302,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 }
                 break;
                 case Align2: {
-                    rotateDegrees(-85);
+                    rotateDegrees(-81);
                     state = State.Balance2;
 
                 }
@@ -318,7 +320,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
                 break;
                 case Red_Beacon2: {
                     right(0.12);
-                    sleep(650);
+                    sleep(350);
                     right(0);
                     robot.bright.setPosition(0);
                     sleep(2000);
@@ -329,7 +331,7 @@ public class BlueAutonFar extends LinearOpMode implements PID_Constants {
 
                 case Blue_Beacon2: {
                     left(0.12);
-                    sleep(550);
+                    sleep(350);
                     left(0);
                     robot.bleft.setPosition(1);
                     sleep(2000);

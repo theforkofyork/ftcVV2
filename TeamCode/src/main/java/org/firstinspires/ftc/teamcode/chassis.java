@@ -114,13 +114,15 @@ public class chassis extends OpMode {
             IS_GATE_OPEN = true; //set is gate open to true
             gate.setPosition(0.76); //open the gate
         }
-        if (gamepad1.dpad_up) {
-            bright.setPosition(0);
-            bleft.setPosition(0);
+        if (gamepad1.dpad_left) {
+            bright.setPosition(0.5);
+        } else {
+            bright.setPosition(0.75);
         }
-        if (gamepad1.dpad_down) {
-            bright.setPosition(1);
-            bleft.setPosition(1);
+        if (gamepad1.dpad_right) {
+            bleft.setPosition(0.5);
+        } else {
+            bleft.setPosition(0.1);
         }
         if (gamepad1.left_bumper || gamepad2.left_bumper)
             sweep.setPower(-1);
