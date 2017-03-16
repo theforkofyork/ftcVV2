@@ -50,9 +50,11 @@ public class LBHW implements PID_Constants {
     public DcMotor ml1 = null;
     public DcMotor fly = null;
     public DcMotor sweep = null;
+    public DcMotor led = null;
     public OpticalDistanceSensor ODS = null;
     public OpticalDistanceSensor ODS2 = null;
     public ColorSensor CS = null;
+    public ColorSensor CS2 = null;
     public OurRangeSensor rangeSensor = null;
     public OurRangeSensor rangeSensor2 = null;
     public I2cDeviceSynch rangeSensor2Reader = null;
@@ -98,11 +100,13 @@ public class LBHW implements PID_Constants {
         ml1 = hwMap.dcMotor.get("ml1");
         ml2 = hwMap.dcMotor.get("ml2");
         fly = hwMap.dcMotor.get("fly1");
+        led = hwMap.dcMotor.get("led");
         sweep = hwMap.dcMotor.get("sweep");
         gate = hwMap.servo.get("g");
         bright = hwMap.servo.get("b1");
         bleft = hwMap.servo.get("b2");
         CS = hwMap.colorSensor.get("CS");
+        CS2 = hwMap.colorSensor.get("CS2");
         ODS = hwMap.opticalDistanceSensor.get("ODS");
         ODS2 = hwMap.opticalDistanceSensor.get("ODS2");
         gyro = (ModernRoboticsI2cGyro)hwMap.gyroSensor.get("gyro");
